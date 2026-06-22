@@ -135,6 +135,13 @@ pub fn exit(code: i32) -> ! {
         target_os = "xous" => {
             crate::os::xous::ffi::exit(code as u32)
         }
+        target_os = "vespera" => {
+            unsafe { crate::sys::pal::c::sys_exit(code as u64, 0, 0, 0, 0, 0); }
+            // According to the contract, our exit never returns,
+            // but the return value is i64 because every syscall has this value,
+            // and if it returns, we abort here.
+            crate::intrinsics::abort()
+        }
         _ => {
             let _ = code;
             crate::intrinsics::abort()

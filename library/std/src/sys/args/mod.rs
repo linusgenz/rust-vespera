@@ -57,6 +57,10 @@ cfg_select! {
         mod zkvm;
         pub use zkvm::*;
     }
+    target_os = "vespera" => {
+        mod vespera;
+        pub use vespera::*;
+    }
     _ => {
         mod unsupported;
         pub use unsupported::*;

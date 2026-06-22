@@ -184,6 +184,9 @@ pub mod vxworks;
 #[cfg(target_os = "xous")]
 pub mod xous;
 
+#[cfg(target_os = "vespera")]
+pub mod vespera;
+
 #[cfg(any(
     unix,
     target_os = "hermit",

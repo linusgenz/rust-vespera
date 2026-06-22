@@ -569,6 +569,7 @@ fn human_readable_target_os(os: Symbol) -> Option<&'static str> {
         Trusty => "Trusty",
         TvOs => "tvOS",
         Uefi => "UEFI",
+        Vespera => "VesperaOS",
         VexOs => "VEXos",
         VisionOs => "visionOS",
         Vita => "Play Station Vita",

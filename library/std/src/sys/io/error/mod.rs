@@ -39,6 +39,10 @@ cfg_select! {
         mod xous;
         pub use xous::*;
     }
+    target_os = "vespera" => {
+        mod vespera;
+        pub use vespera::*;
+    }
     any(
         target_os = "vexos",
         target_family = "wasm",

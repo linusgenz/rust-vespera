@@ -1782,6 +1782,7 @@ supported_targets! {
     ("armv7-unknown-linux-uclibceabihf", armv7_unknown_linux_uclibceabihf),
 
     ("x86_64-unknown-none", x86_64_unknown_none),
+    ("x86_64-unknown-vespera", x86_64_unknown_vespera),
 
     ("aarch64-unknown-teeos", aarch64_unknown_teeos),
 
@@ -2007,6 +2008,7 @@ crate::target_spec_enum! {
         VisionOs = "visionos",
         Vita = "vita",
         VxWorks = "vxworks",
+        Vespera = "vespera",
         Wasi = "wasi",
         WatchOs = "watchos",
         Windows = "windows",

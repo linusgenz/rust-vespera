@@ -3,6 +3,9 @@
 
 #![allow(missing_debug_implementations)]
 
+pub mod unsupported;
+pub use unsupported::unsupported;
+
 cfg_select! {
     unix => {
         mod unix;
@@ -60,8 +63,12 @@ cfg_select! {
         mod zkvm;
         pub use self::zkvm::*;
     }
+    target_os = "vespera" => {
+        mod vespera;
+        pub use self::vespera::*;
+    }
     _ => {
-        mod unsupported;
+        // mod unsupported;
         pub use self::unsupported::*;
     }
 }
