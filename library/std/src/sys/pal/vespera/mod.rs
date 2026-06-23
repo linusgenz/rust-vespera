@@ -4,6 +4,7 @@ mod unsupported_common;
 pub mod c;
 pub mod util;
 pub mod time;
+pub mod futex;
 
 pub unsafe fn init(argc: isize, argv: *const *const u8, _sigpipe: u8) {
     unsafe {

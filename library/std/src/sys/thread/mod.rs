@@ -88,6 +88,13 @@ cfg_select! {
         ))]
         pub use unsupported::set_name;
     }
+    target_os = "vespera" => {
+        mod vespera;
+        pub use vespera::{Thread, available_parallelism, current_os_id, sleep, yield_now, DEFAULT_MIN_STACK_SIZE};
+        #[expect(dead_code)]
+        mod unsupported;
+        pub use unsupported::set_name;
+    }
     target_os = "vexos" => {
         mod vexos;
         pub use vexos::{sleep, sleep_until, yield_now};

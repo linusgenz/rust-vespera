@@ -21,9 +21,10 @@ pub(crate) fn target() -> Target {
             max_atomic_width: Some(64),
             stack_probes: StackProbeType::Inline,
             has_thread_local: true,
+            tls_model: crate::spec::TlsModel::InitialExec,
             position_independent_executables: true,
             static_position_independent_executables: true,
-            relocation_model: crate::spec::RelocModel::Static,
+            relocation_model: crate::spec::RelocModel::Pic,
             panic_strategy: crate::spec::PanicStrategy::Abort,
             ..Default::default()
         },

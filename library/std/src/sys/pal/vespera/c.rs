@@ -1,3 +1,5 @@
+pub type UnitID = u64;
+pub type RealmID = u64;
 
 unsafe extern "C" {
     #[doc = " @brief Terminate the current unit.\n\n @param code Exit code.\n @return This function does not return; halts the unit."]
@@ -180,20 +182,20 @@ pub type clockid_t = i32;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Default)]
-pub struct timespec_t {
+pub struct timespec {
     pub tv_sec: i64,
     pub tv_nsec: i64,
 }
 
 unsafe extern "C" {
-    pub fn clock_gettime(clk_id: clockid_t, ts: *mut timespec_t) -> i64;
-    pub fn clock_settime(clk_id: clockid_t, ts: *const timespec_t) -> i64;
-    pub fn nanosleep(req: *const timespec_t, rem: *mut timespec_t) -> core::ffi::c_int;
+    pub fn clock_gettime(clk_id: clockid_t, ts: *mut timespec) -> i64;
+    pub fn clock_settime(clk_id: clockid_t, ts: *const timespec) -> i64;
+    pub fn nanosleep(req: *const timespec, rem: *mut timespec) -> core::ffi::c_int;
     pub fn clock_nanosleep(
         clk_id: clockid_t,
         flags: core::ffi::c_int,
-        req: *const timespec_t,
-        rem: *mut timespec_t,
+        req: *const timespec,
+        rem: *mut timespec,
     ) -> core::ffi::c_int;
 }
 
@@ -239,6 +241,7 @@ pub const ELOOP: i32 = 40;
 pub const ENOMSG: i32 = 42;
 pub const EOVERFLOW: i32 = 75;
 pub const EILSEQ: i32 = 84;
+pub const ETIMEDOUT: i32 = 116;       /* Connection timed out */
 pub const EUNKNOWN: i32 = 1000;
 pub const EUNSUPPORTED: i32 = 1001;
 pub const EDEADLOCK: i32 = 1002;
@@ -247,6 +250,69 @@ pub const EWOULDBLOCK: i32 = 11;
 unsafe extern "C" {
     pub fn strerror(err: core::ffi::c_int) -> *const core::ffi::c_char;
 }
+
 unsafe extern "C" {
-    pub static mut errno: core::ffi::c_int;
+    pub fn __errno_location() -> *mut core::ffi::c_int;
+}
+
+unsafe extern "C" {
+    #[doc = " @brief Spawn a new unit (thread) inside an existing realm.\n\n @param realm_id The ID of the target realm.\n @param entry_point Pointer to the function or code where the unit should start.\n @param arg_ptr Pointer to argument data for the unit.\n @return Unit ID on success, negative error code on failure."]
+    pub fn spawn_unit(realm_id: RealmID, entry_point: u64, arg_ptr: u64, stack_size: u64)
+                      -> UnitID;
+}
+unsafe extern "C" {
+    #[doc = " @brief Wait for a unit within the current realm to finish.\n\n Blocks until the unit with the given ID has terminated.\n\n @param unit_id The ID of the unit to wait for.\n @param exit_code_out Pointer to store the unit's exit/return code, or NULL if unused.\n @return 0 on success, negative error code on failure (e.g. -ESRCH if unit_id invalid/already reaped)."]
+    pub fn join_unit(unit_id: UnitID, exit_code_out: *mut i64) -> i64;
+}
+unsafe extern "C" {
+    pub fn get_realm_id() -> RealmID;
+}
+
+unsafe extern "C" {
+    pub fn sched_yield();
+}
+unsafe extern "C" {
+    pub fn get_unit_id() -> UnitID;
+}
+
+#[doc = " @brief Struct representing CPU information in user-space.\n\n This struct mirrors the data provided by the kernel CPUInfo device.\n It contains the CPU vendor string, brand string, and a bitfield\n representing CPU features."]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct cpu_info {
+    #[doc = "< CPU vendor string (null-terminated)"]
+    pub vendor: [core::ffi::c_char; 13usize],
+    #[doc = "< CPU brand string (null-terminated)"]
+    pub brand: [core::ffi::c_char; 49usize],
+    #[doc = "< CPU features bitfield"]
+    pub features: u64,
+    #[doc = "< usable cores (should be equal to total_cores)"]
+    pub cores: u8,
+    #[doc = "< total cores"]
+    pub total_cores: u8,
+}
+
+pub const FUTEX_WAIT: u32 = 0;
+pub const FUTEX_WAKE: u32 = 1;
+pub const FUTEX_WAKE_ALL: u32 = 2;
+pub const FUTEX_ABSTIME: u32 = 256;
+
+unsafe extern "C" {
+    pub fn futex_wait(
+        addr: *const u32,
+        expected: u32,
+        timeout: *const timespec,
+    ) -> core::ffi::c_int;
+}
+unsafe extern "C" {
+    pub fn futex_wake(addr: *mut u32, n: u32) -> core::ffi::c_int;
+}
+unsafe extern "C" {
+    pub fn futex_wake_all(addr: *mut u32) -> core::ffi::c_int;
+}
+unsafe extern "C" {
+    pub fn futex_wait_until(
+        addr: *const u32,
+        expected: u32,
+        deadline: *const timespec,
+    ) -> core::ffi::c_int;
 }

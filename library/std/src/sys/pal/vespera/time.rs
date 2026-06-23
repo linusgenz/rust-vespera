@@ -37,7 +37,7 @@ impl Timespec {
     }
 
     pub fn now(clock: c::clockid_t) -> Timespec {
-        let mut t = MaybeUninit::<c::timespec_t>::uninit();
+        let mut t = MaybeUninit::<c::timespec>::uninit();
         let ret = unsafe { c::clock_gettime(clock, t.as_mut_ptr()) };
 
         assert!(ret == 0, "clock_gettime failed: {ret}");
@@ -98,8 +98,8 @@ impl Timespec {
         Some(unsafe { Timespec::new_unchecked(secs, nsec.into()) })
     }
 
-    pub fn to_timespec(&self) -> Option<c::timespec_t> {
-        Some(c::timespec_t {
+    pub fn to_timespec(&self) -> Option<c::timespec> {
+        Some(c::timespec {
             tv_sec: self.tv_sec,
             tv_nsec: self.tv_nsec.as_inner() as i64,
         })

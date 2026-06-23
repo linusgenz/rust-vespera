@@ -5,15 +5,13 @@ use crate::sys::pal::c;
 
 #[inline]
 pub fn errno() -> i32 {
-    unsafe { c::errno }
+    unsafe { *c::__errno_location() }
 }
 
 #[inline]
 #[allow(dead_code)]
 pub fn set_errno(e: i32) {
-    unsafe {
-        c::errno = e;
-    }
+    unsafe { *c::__errno_location() = e; }
 }
 
 #[inline]
