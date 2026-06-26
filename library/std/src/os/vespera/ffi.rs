@@ -1,7 +1,7 @@
-#![stable(feature = "rust1", since = "1.0.0")]
+#![unstable(feature = "vespera_platform", issue = "none")]
 
 #[path = "../unix/ffi/os_str.rs"]
 mod os_str;
 
-#[stable(feature = "rust1", since = "1.0.0")]
+#[unstable(feature = "vespera_platform", issue = "none")]
 pub use self::os_str::{OsStrExt, OsStringExt};

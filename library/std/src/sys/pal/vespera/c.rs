@@ -1,6 +1,11 @@
 pub type UnitID = u64;
 pub type RealmID = u64;
 
+const HANDLE_TYPE_DEVICE: u64 = 0x7000000000000000;
+pub const HANDLE_STDIN: u64 = HANDLE_TYPE_DEVICE | 0;
+pub const HANDLE_STDOUT: u64 = HANDLE_TYPE_DEVICE | 1;
+pub const HANDLE_STDERR: u64 = HANDLE_TYPE_DEVICE | 2;
+
 unsafe extern "C" {
     #[doc = " @brief Terminate the current unit.\n\n @param code Exit code.\n @return This function does not return; halts the unit."]
     pub fn sys_exit(code: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) -> i64;
@@ -315,4 +320,93 @@ unsafe extern "C" {
         expected: u32,
         deadline: *const timespec,
     ) -> core::ffi::c_int;
+}
+
+unsafe extern "C" {
+    pub fn sys_dup(arg0: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) -> i64;
+}
+unsafe extern "C" {
+    pub fn sys_dup2(arg0: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) -> i64;
+}
+unsafe extern "C" {
+    pub fn sys_dup3(arg0: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) -> i64;
+}
+
+unsafe extern "C" {
+    #[doc = " @brief Close a handle.\n\n @param hid Handle ID to close.\n @return 0 on success, or -EBADH on invalid handle."]
+    pub fn sys_close(hid: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) -> i64;
+}
+
+unsafe extern "C" {
+    pub fn sys_pipe(arg0: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) -> i64;
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct spawn_config {
+    #[doc = "< Replace HANDLE_STDIN  in child (0 = inherit TTY)"]
+    pub stdin_handle: u64,
+    #[doc = "< Replace HANDLE_STDOUT in child (0 = inherit TTY)"]
+    pub stdout_handle: u64,
+    #[doc = "< Replace HANDLE_STDERR in child (0 = inherit TTY)"]
+    pub stderr_handle: u64,
+    #[doc = "< If set true, detach from controlling tty"]
+    pub bg_realm: u8,
+    #[doc = "< Optional explicit name for the new realm"]
+    pub realm_name: *mut core::ffi::c_char,
+    #[doc = "< Real user ID for the new process (0 = inherit)"]
+    pub uid: u32,
+    #[doc = "< Real group ID for the new process (0 = inherit)"]
+    pub gid: u32,
+    #[doc = "< Optional home directory (sets initial cwd if provided)"]
+    pub home: *mut core::ffi::c_char,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of spawn_config"][::core::mem::size_of::<spawn_config>() - 56usize];
+    ["Alignment of spawn_config"][::core::mem::align_of::<spawn_config>() - 8usize];
+    ["Offset of field: spawn_config::stdin_handle"]
+        [::core::mem::offset_of!(spawn_config, stdin_handle) - 0usize];
+    ["Offset of field: spawn_config::stdout_handle"]
+        [::core::mem::offset_of!(spawn_config, stdout_handle) - 8usize];
+    ["Offset of field: spawn_config::stderr_handle"]
+        [::core::mem::offset_of!(spawn_config, stderr_handle) - 16usize];
+    ["Offset of field: spawn_config::bg_realm"]
+        [::core::mem::offset_of!(spawn_config, bg_realm) - 24usize];
+    ["Offset of field: spawn_config::realm_name"]
+        [::core::mem::offset_of!(spawn_config, realm_name) - 32usize];
+    ["Offset of field: spawn_config::uid"][::core::mem::offset_of!(spawn_config, uid) - 40usize];
+    ["Offset of field: spawn_config::gid"][::core::mem::offset_of!(spawn_config, gid) - 44usize];
+    ["Offset of field: spawn_config::home"][::core::mem::offset_of!(spawn_config, home) - 48usize];
+};
+
+pub type spawn_config_t = spawn_config;
+unsafe extern "C" {
+    #[doc = " @brief Spawn a new realm (isolated execution context).\n\n The new realm starts with a single initial unit.\n\n @param path_ptr Pointer to the path of the executable binary.\n @param argv Pointer to an array of argument strings.\n @param envp Pointer to a NULL-terminated array of strings representing the environment variables for the new realm.\n Can be @c NULL if no environment variables are needed.\n @return Realm ID on success, negative error code on failure."]
+    pub fn spawn_realm(
+        path_ptr: *const core::ffi::c_char,
+        argv: *const *mut core::ffi::c_char,
+        envp: *const *mut core::ffi::c_char,
+        cfg: *mut spawn_config_t,
+    ) -> RealmID;
+}
+unsafe extern "C" {
+    #[doc = " @brief Terminate an entire realm and all its units.\n\n @param realm_id The ID of the realm to terminate.\n @param code Exit code for the realm.\n @return 0 on success, negative error code on failure."]
+    pub fn exit_realm(realm_id: RealmID, code: u64) -> i64;
+}
+
+pub const WAIT_FLAG_NONE: u32 = 0;
+pub const WAIT_FLAG_NOHANG: u32 = 1;
+
+unsafe extern "C" {
+    #[doc = " @brief Wait for a realm to finish execution.\n\n Blocks the current process until the realm with ID @p realm_id has completed.\n\n @param realm_id The ID of the realm to wait for.\n @param status Pointer to an int to store the exit status, or @c NULL if unused.\n @return 0 on success, or a negative error code on failure (e.g., -ECHILD)."]
+    pub fn wait_realm(
+        realm_id: RealmID,
+        status: *mut core::ffi::c_int,
+        flags: u32,
+    ) -> core::ffi::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Send a signal to another process.\n\n @param pid    Target process ID.\n @param signum Signal number.\n @return 0 on success, -1 on error (errno is set)."]
+    pub fn kill(pid: core::ffi::c_int, signum: core::ffi::c_int) -> core::ffi::c_int;
 }

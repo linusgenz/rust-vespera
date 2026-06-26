@@ -9,6 +9,7 @@ use crate::mem::MaybeUninit;
 use crate::os::vespera::ffi::OsStrExt;
 use crate::path::{Path, PathBuf};
 pub use crate::sys::fs::common::Dir;
+use crate::sys::fd::FileDesc;
 use crate::sys::pal::c;
 use crate::sys::pal::util::cstr;
 use crate::sys::time::SystemTime;
@@ -180,7 +181,7 @@ impl OpenOptions {
 }
 
 pub struct File {
-    handle: c::HANDLE,
+    fd: FileDesc,
 }
 
 impl File {
@@ -191,7 +192,9 @@ impl File {
         if handle == u64::MAX {
             return Err(io::Error::last_os_error());
         }
-        Ok(File { handle })
+        // SAFETY: handle ist gerade frisch von c::open zurückgegeben worden
+        // und damit ein gültiges, exklusiv besessenes Handle.
+        Ok(File { fd: unsafe { FileDesc::from_raw_handle(handle) } })
     }
 
     pub fn file_attr(&self) -> io::Result<FileAttr> {
@@ -241,56 +244,35 @@ impl File {
     }
 
     pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let ret = unsafe {
-            c::read(self.handle, buf.as_mut_ptr() as *mut core::ffi::c_void, buf.len())
-        };
-        if ret < 0 { Err(map_err(ret as i64)) } else { Ok(ret as usize) }
+        self.fd.read(buf)
     }
 
     pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
-        crate::io::default_read_vectored(|b| self.read(b), bufs)
+        self.fd.read_vectored(bufs)
     }
 
     pub fn is_read_vectored(&self) -> bool {
-        false
+        self.fd.is_read_vectored()
     }
 
-    pub fn read_buf(&self, mut cursor: BorrowedCursor<'_, u8>) -> io::Result<()> {
-        let ret = unsafe {
-            let buf = cursor.as_mut();
-            let ptr = buf.as_mut_ptr() as *mut core::ffi::c_void;
-
-            c::read(self.handle, ptr, buf.len())
-        };
-
-        if ret < 0 {
-            return Err(map_err(ret as i64));
-        }
-
-        let n = ret as usize;
-        unsafe {
-            cursor.advance(n);
-        }
-
-        Ok(())
+    pub fn read_buf(&self, cursor: BorrowedCursor<'_, u8>) -> io::Result<()> {
+        self.fd.read_buf(cursor)
     }
 
     pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        let ret =
-            unsafe { c::write(self.handle, buf.as_ptr() as *const core::ffi::c_void, buf.len()) };
-        if ret < 0 { Err(map_err(ret as i64)) } else { Ok(ret as usize) }
+        self.fd.write(buf)
     }
 
     pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        crate::io::default_write_vectored(|b| self.write(b), bufs)
+        self.fd.write_vectored(bufs)
     }
 
     pub fn is_write_vectored(&self) -> bool {
-        false
+        self.fd.is_write_vectored()
     }
 
     pub fn flush(&self) -> io::Result<()> {
-        Ok(())
+        self.fd.flush()
     }
 
     pub fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
@@ -299,7 +281,8 @@ impl File {
             SeekFrom::End(off) => (off, c::SEEK_END),
             SeekFrom::Current(off) => (off, c::SEEK_CUR),
         };
-        let ret = unsafe { c::lseek(self.handle, offset, whence as core::ffi::c_int) };
+
+        let ret = unsafe { c::lseek(self.fd.as_raw_handle(), offset, whence as core::ffi::c_int) };
         if ret < 0 { Err(map_err(ret)) } else { Ok(ret as u64) }
     }
 
@@ -312,7 +295,7 @@ impl File {
     }
 
     pub fn duplicate(&self) -> io::Result<File> {
-        unsupported()
+        Ok(File { fd: self.fd.duplicate()? })
     }
 
     pub fn set_permissions(&self, _perm: FilePermissions) -> io::Result<()> {
@@ -322,19 +305,20 @@ impl File {
     pub fn set_times(&self, _times: FileTimes) -> io::Result<()> {
         unsupported()
     }
-}
 
-impl Drop for File {
-    fn drop(&mut self) {
-        unsafe {
-            c::close(self.handle);
-        }
+    pub fn as_raw_handle(&self) -> c::HANDLE {
+        self.fd.as_raw_handle()
+    }
+
+    pub fn into_raw_handle(self) -> c::HANDLE {
+        self.fd.into_raw_handle()
     }
 }
 
+
 impl fmt::Debug for File {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("File").field("handle", &self.handle).finish()
+        f.debug_struct("File").field("handle", &self.fd.as_raw_handle()).finish()
     }
 }
 

@@ -1,3 +1,2 @@
-#![stable(feature = "rust1", since = "1.0.0")]
-
+#![unstable(feature = "vespera_platform", issue = "none")]
 pub mod ffi;
